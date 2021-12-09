@@ -1,7 +1,15 @@
 #include <funzioni.h>
+
+//funzione utile a scandire il tempo calcolando la differenza tra due tempi
+float time_diff(struct timespec *start, struct timespec *end){
+    return (end->tv_sec - start->tv_sec) + 1e-9*(end->tv_nsec - start->tv_nsec);
+}
+
 //funzione che muove i pezzi dello snake aggiornandoli sul playground
-int moveSnake(int dir, snake *chunk,char playGround[SIZE][SIZE]){
+int moveSnakeHead(int dir, snake *chunk,char playGround[SIZE][SIZE],int dim){
 	snakeDelete(*chunk, playGround);
+	chunk->preX = chunk->x;
+	chunk->preY = chunk->y;
 	switch(dir){
 		case 1:
 			chunk->x-=1;
@@ -18,18 +26,38 @@ int moveSnake(int dir, snake *chunk,char playGround[SIZE][SIZE]){
 	}
 	if(playGround[chunk->y][chunk->x] == (char)169){
 		snakePrint(*chunk, playGround);
+		chunk[dim].x = chunk[dim-1].preX;
+		chunk[dim].y = chunk[dim-1].preY;
 		appleSpawn(playGround);
 		return 1;
 	}
-	else{
-		snakePrint(*chunk, playGround);
-		return 0;
-	}
+	if(ctrlSnake(chunk,playGround))
+		return -999;
+	snakePrint(*chunk, playGround);
+	return 0;
+
 }
+
+//funzione che muove il corpo del serpente
+void moveSnakeBody(snake *chunk,char playGround[SIZE][SIZE],int dim){
+	 for(int i = 0; i<dim-1;i++){
+		 //AKA SnakeDelete
+		playGround[chunk[i+1].y][chunk[i+1].x] = ' ';
+		chunk[i+1].preX = chunk[i+1].x;
+		chunk[i+1].preY = chunk[i+1].y;
+		chunk[i+1].x = chunk[i].preX;
+		chunk[i+1].y = chunk[i].preY;
+		//AKA SnakePrint
+		playGround[chunk[i+1].y][chunk[i+1].x] = (char)001;
+	 }
+}
+
 //funzione che controlla se il serpente tocca un bordo
-int ctrlSnake(snake *chunk){
-	if(chunk->x == 1 || chunk->x == SIZE-1 || chunk->y == 1 || chunk->y == SIZE-1)
-		return 1;
+int ctrlSnake(snake *chunk, char playGround[SIZE][SIZE]){
+	if(playGround[chunk->y][chunk->x] != ' ' && playGround[chunk->y][chunk->x] != (char)169){
+			endgame(1);
+			return 1;
+	}
 	else 
 		return 0;
 }
@@ -88,15 +116,7 @@ int input()
 			return 5;
 		}
 }
-//funzione che verifica il clock
-int clockF(time_t *temp){
-	if(difftime(time(NULL),*temp)>SPEED){
-		*temp = time(NULL);
-		return 1;
-	}
-	else
-		return 0;
-}
+
 //funzione che verifica l'ortogonalità dei movimenti del serpente
 int dirVrfy(int dir, int prevDir){
 	switch(dir){
@@ -119,7 +139,7 @@ int dirVrfy(int dir, int prevDir){
 	}
 	return dir;
 }
-
+//funzione che spawna casualmente le mele in giro per la mappa
 void appleSpawn(char playGround[SIZE][SIZE]){
 	int x,y;
 	do{
@@ -128,4 +148,12 @@ void appleSpawn(char playGround[SIZE][SIZE]){
 	}while(playGround[y][x] != ' ');
 	playGround[y][x] = (char)169;
 	
+	}
+//funzione che gestisce la fine del gioco in base al parametro in ingresso
+void endgame(int c){
+		system("cls");
+		if(c)
+			printf("hai perso\n");
+		else
+			printf("hai vinto, il serpente e' lunghissimo!!!!!\n");
 	}
